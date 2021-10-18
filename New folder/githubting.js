@@ -1,3 +1,22 @@
+// Vertex and fragement shader source
+var vertCode = [
+	'attribute vec3 coordinates;',
+	'',
+	'void main() {',
+	'	gl_Position = vec4(coordinates, 1.0);',
+	'}'
+].join('\n');
+
+var fragCode = [
+  'precision mediump float;',
+  'uniform vec4 fColor;',
+  '',
+  'void main()',
+  '{',
+  ' gl_FragColor = fColor;',
+  '}'
+].join('\n');
+
 var main = function() {
 
 	// Game's main variables
@@ -7,8 +26,8 @@ var main = function() {
 	var bacRemaining = winKillAmt;
 	var lives = 2;
 	var spawnedBac = 0;
-	var clickedPoints = [];
-	var particles = [];
+	//var clickedPoints = [];
+	//var particles = [];
 	var reduceVariable = 90;
 	// Set radius and size for game-circle
 	var r=0.8;
@@ -30,27 +49,10 @@ var main = function() {
 	var pCtx = particlesCanvas.getContext('2d')
 
 	// Set font for text Canvas
-	ctx.font = "22px Arial";
+	ctx.font = "20px Verdana";
 	ctx.textAlign = "center";
 
-	// Vertex and fragement shader source
-	var vertCode = [
-		'attribute vec3 coordinates;',
-		'',
-		'void main() {',
-		'	gl_Position = vec4(coordinates, 1.0);',
-		'}'
-	].join('\n');
-
-	var fragCode = [
-	  'precision mediump float;',
-	  'uniform vec4 fColor;',
-	  '',
-	  'void main()',
-	  '{',
-	  ' gl_FragColor = fColor;',
-	  '}'
-	].join('\n');
+	
 
 	// Create an empty buffer object
 	var vertex_buffer = gl.createBuffer();
@@ -159,7 +161,7 @@ var main = function() {
 		let m = distance(x1, y1, x2, y2);
 		return [(x2-x1)/m, (y2-y1)/m];
 	}
-
+/*
 	function createExplosionAtBacteria(bac){
 		// Convert Bacteria(WebGL) data into canvas data
 		let bacX = (bac.x + 2/75 + 1) * 300;
@@ -194,6 +196,7 @@ var main = function() {
 			}
 		}
 	}
+	*/
 	// Assign function to mouse click
 	canvas.onmousedown = function(e, canvas){click(e, gameSurface);};
 
@@ -214,10 +217,11 @@ var main = function() {
 		for(let i in bacArr) {
 			if(colliding(x, y, 0, bacArr[i].x, bacArr[i].y, bacArr[i].r)){
 				ptsInc = Math.round(1/bacArr[i].r);
-				createExplosionAtBacteria(bacArr[i]);
+				//createExplosionAtBacteria(bacArr[i]);
  			 	score += ptsInc;
 				bacArr[i].destroy(i);
  			 	hit = true;
+				  /*
 				clickedPoints.push({
 					pts: "+" + ptsInc,
 					x: e.clientX,
@@ -225,6 +229,7 @@ var main = function() {
 					dY: 0,
 					color: "rgba(0,200,0,"
 				});
+				*/
 			 	// Break ensures you can't click multiple bacteria at once
 			 	break;
 			 }
@@ -233,6 +238,7 @@ var main = function() {
 		// If you click and don't hit a bacteria, your score is decreased by 20 + the total amount of times you've clicked.
 		if(!hit && bacRemaining != 0) {
 			missClicks ++;
+			/*
 			clickedPoints.push({
 				pts: -20 - missClicks,
 				x: e.clientX,
@@ -240,6 +246,7 @@ var main = function() {
 				dY: 0,
 				color: "rgba(255,0,0,"
 			});
+			*/
 			score -= (20 + missClicks);
 		}
 	}
@@ -257,7 +264,7 @@ var main = function() {
 
 		constructor(id) {
 			this.id = id;
-			this.consuming = [];
+			//this.consuming = [];
 		}
 
 		spawn() {
@@ -294,7 +301,7 @@ var main = function() {
 			// times by 0.65 to ensure the bacteria isn't as light as the canvas
 			this.color = [Math.random() * (0.65), Math.random() * (0.65), Math.random() * (0.65), 0.75];
 			this.alive = true;
-			this.consuming = [];
+			//this.consuming = [];
 			spawnedBac++;
 		}
 
@@ -312,7 +319,7 @@ var main = function() {
 					this.color[3] += 0.0003;
 
 					/* Collision Check with consuming assigning,
-						 finds which bacteria are colliding and sets the larger one to consume the other */
+						 finds which bacteria are colliding and sets the larger one to consume the other 
 					for(i in bacArr) {
 						//Skip itself
 						if(this != bacArr[i]){
@@ -338,7 +345,7 @@ var main = function() {
 										/* While being consumed, the bacteria will
 										move in the direction of the consumer,
 										its radius will be shrunk and the consumer's
-										will grow */
+										will grow 
 										consuming.x -= dVec[0]/(1800*consuming.r);
 										consuming.y -= dVec[1]/(1800*consuming.r);
 										consuming.r -= 0.0025;
@@ -350,6 +357,7 @@ var main = function() {
 							}
 						}
 					}
+					*/
 				}
 				// Draw
 				draw_circle(this.x, this.y, this.r, this.color);
@@ -364,20 +372,20 @@ var main = function() {
 			this.alive = false;
 			bacRemaining--;
 
-			// Destroy any other bacteria being consumed
-			for(i in this.consuming) {
-				this.consuming[i].destroy(bacArr.indexOf(this.consuming[i]));
-			}
+			// // Destroy any other bacteria being consumed
+			// for(i in this.consuming) {
+			// 	this.consuming[i].destroy(bacArr.indexOf(this.consuming[i]));
+			// }
 
-			// Remove destroyed bacteria from any other Bacteria.consuming arrays
-			for(i in bacArr) {
-				if(bacArr[i].consuming.indexOf(this) != -1) {
-					bacArr[i].consuming.splice(bacArr[i].consuming.indexOf(this), 1);
-				}
-			}
+			// // Remove destroyed bacteria from any other Bacteria.consuming arrays
+			// for(i in bacArr) {
+			// 	if(bacArr[i].consuming.indexOf(this) != -1) {
+			// 		bacArr[i].consuming.splice(bacArr[i].consuming.indexOf(this), 1);
+			// 	}
+			// }
 
-			// Reset array for this bacteria
-			this.consuming = [];
+			// // Reset array for this bacteria
+			// this.consuming = [];
 
 			// Remove destroyed bacteria from the bacteria array in order to spawn new ones
 			bacArr.splice(index,1);
@@ -413,7 +421,7 @@ var main = function() {
 			}
 		}
 	} // End of Bacteria class
-
+/*
 	class Particle {
 
 		constructor(x, y, r, color) {
@@ -448,6 +456,7 @@ var main = function() {
 			}
 		}
 	} // End of Particle Class
+	*/
 
 	// Create and push new Bacteria objects into bacArr, then spawn each Bacteria
 	for(var i = 0; i<totBac; i++){
@@ -458,8 +467,8 @@ var main = function() {
 	function winCondition(){
 		 if(lives > 0 && bacRemaining <= 0) {
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
-			clickedPoints = [];
-			particles = [];
+			//clickedPoints = [];
+			//particles = [];
 			ctx.fillStyle = "rgba(0, 255, 0, 1.0)";
 			ctx.font = "80px Verdana";
 			ctx.fillText("You win!", 300, 300);
@@ -498,27 +507,27 @@ var main = function() {
 				}
 
 				// Used for displaying points awarded on clicks
-				for(i in clickedPoints) {
-					// Variable for change in y position of each point
-					clickedPoints[i].dY--;
-					// If the point's y has changed by 50, remove the point from the array
-					if(clickedPoints[i].dY <= -50){
-						clickedPoints.splice(i,1);
-					} else {
-						// Clear canvas only around specific text
-						ctx.clearRect(clickedPoints[i].x - 25, clickedPoints[i].y + clickedPoints[i].dY - 20, clickedPoints[i].x + 20, clickedPoints[i].y + 20);
-						// Alpha of the points approaches zero as it reaches its max change in y to simulate a fade out
-						ctx.fillStyle = clickedPoints[i].color + (1.0 - (clickedPoints[i].dY * -0.02) + ")");
-						// Print the points awarded and move them upwards
-						ctx.fillText(clickedPoints[i].pts, clickedPoints[i].x, clickedPoints[i].y + clickedPoints[i].dY);
-					}
-				}
+				// for(i in clickedPoints) {
+				// 	// Variable for change in y position of each point
+				// 	clickedPoints[i].dY--;
+				// 	// If the point's y has changed by 50, remove the point from the array
+				// 	if(clickedPoints[i].dY <= -50){
+				// 		clickedPoints.splice(i,1);
+				// 	} else {
+				// 		// Clear canvas only around specific text
+				// 		ctx.clearRect(clickedPoints[i].x - 25, clickedPoints[i].y + clickedPoints[i].dY - 20, clickedPoints[i].x + 20, clickedPoints[i].y + 20);
+				// 		// Alpha of the points approaches zero as it reaches its max change in y to simulate a fade out
+				// 		ctx.fillStyle = clickedPoints[i].color + (1.0 - (clickedPoints[i].dY * -0.02) + ")");
+				// 		// Print the points awarded and move them upwards
+				// 		ctx.fillText(clickedPoints[i].pts, clickedPoints[i].x, clickedPoints[i].y + clickedPoints[i].dY);
+				// 	}
+				// }
 
 				// Loop through all particles to draw
-				pCtx.clearRect(0, 0, canvas.width, canvas.height);
-				for(i in particles) {
-					particles[i].draw();
-				}
+				// pCtx.clearRect(0, 0, canvas.width, canvas.height);
+				// for(i in particles) {
+				// 	particles[i].draw();
+				// }
 				// Just to ensure the game over text is printed. Need to fix this mess up.
 				loseCondition();
 			}
