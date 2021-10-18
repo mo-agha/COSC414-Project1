@@ -533,7 +533,7 @@ var main = function() {
 			}
 
 		// Draw the game surface circle
-		draw_circle(0,0,0.8,[0.05, 0.1, 0.05, 0.5]);
+		draw_circle(0,0,0.8,[0.6, 0.8, 1.0, 1.0]);
 		requestAnimationFrame(gameLoop);
 	}
 	requestAnimationFrame(gameLoop);
