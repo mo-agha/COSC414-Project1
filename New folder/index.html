@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title> Bacteria Zapper</title>
+        <style>
+          .container {
+            position: relative;
+          }
+          #text {
+            position: absolute;
+            pointer-events: none;
+            left: 0px;
+            top: 0px;
+            z-index: 10;
+          }
+          #particles {
+            position: absolute;
+            pointer-events: none;
+            left: 0px;
+            top: 0px;
+            z-index: 2;
+          }
+          p {
+            color:blue;
+          }
+        </style>
+
+        <script src="app.js"> </script>
+    </head>
+
+    <body onload="demo()">
+        <div class="container">
+          <canvas id="game-surface" width="600" height="600">
+            use browser that supports canvas
+          </canvas>
+          <canvas id="particles" width="600" height="600"></canvas>
+          <canvas id="text" width="600" height="600"></canvas>      
+        </div>
+
+
+        <h1> Score: <span id="scoreDisplay"></span></h1>
+        <h3> Bacteria Remaining: <span id="bacRemaining"></span></h3>
+        <h3> Lives left: <span id="lives"></span></h3>
+        <p>Click the 'bacteria' to destroy</p>
+        <p>Each time a bacteria grows too big, you will lose a life</p>
+        <span id="fps"></span>
+    </body>
+</html>
