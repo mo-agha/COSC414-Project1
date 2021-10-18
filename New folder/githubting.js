@@ -138,17 +138,17 @@ var main = function() {
 	}
 
 	// Uses radius and distance to determine if two objects are colliding
-	function colliding(x1, y1, r1, x2, y2, r2) {
-		var xDist = x2-x1;
-		var yDist = y2-y1;
-		var totDist = Math.sqrt(Math.pow(xDist, 2) + Math.pow(yDist, 2));
+	// function colliding(x1, y1, r1, x2, y2, r2) {
+	// 	var xDist = x2-x1;
+	// 	var yDist = y2-y1;
+	// 	var totDist = Math.sqrt(Math.pow(xDist, 2) + Math.pow(yDist, 2));
 
-		if(distance(x1, y1, x2, y2) - (r1+r2) < 0) {
-			return true;
-		}
+	// 	if(distance(x1, y1, x2, y2) - (r1+r2) < 0) {
+	// 		return true;
+	// 	}
 
-		return false;
-	}
+	// 	return false;
+	// }
 
 	// Pythagorean theorem
 	function distance(x1, y1, x2, y2) {
@@ -215,7 +215,7 @@ var main = function() {
 		// Loop through all bacteria and check if you clicked within the radius of any
 		// Increase score and destroy the bacteria
 		for(let i in bacArr) {
-			if(colliding(x, y, 0, bacArr[i].x, bacArr[i].y, bacArr[i].r)){
+			if(distance(x, y, bacArr[i].x, bacArr[i].y) - (0+ bacArr[i].r) < 0){
 				ptsInc = Math.round(1/bacArr[i].r);
 				//createExplosionAtBacteria(bacArr[i]);
  			 	score += ptsInc;
@@ -288,12 +288,12 @@ var main = function() {
 
 				// If theres a collision with a specific object, the variables need to be randomized again
 				// Also need to set i = -1 to ensure it loops through all bacteria again
-				if (colliding(this.x, this.y, 0.06, bacArr[i].x, bacArr[i].y, bacArr[i].r)) {
-					this.getNewRandomTrigData();
-					this.getCircPoints();
-					attempt++;
-					i = -1;
-				}
+				// if (colliding(this.x, this.y, 0.06, bacArr[i].x, bacArr[i].y, bacArr[i].r)) {
+				// 	this.getNewRandomTrigData();
+				// 	this.getCircPoints();
+				// 	attempt++;
+				// 	i = -1;
+				// }
 			}
 
 			// Store new data for each Bacteria
