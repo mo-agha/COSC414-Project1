@@ -1,556 +1,329 @@
 var vertexShaderText = [
+'precision mediump float;',
 
-    'attribute vec3 vertPosition;',
-    
-    '',
-    
-    'void main()',
-    '{',
-    '	gl_Position = vec4(vertPosition, 1.0);',
-    '}'
-    ].join('\n');
-    
-    var fragmentShaderText =
-    [
-    'precision mediump float;',
-    'uniform vec4 fcolor;',
-    
-    '',
-    'void main()',
-    '{',
-        
-    '	gl_FragColor = fcolor;',
-    '}',
-    ].join('\n')
-    
-    
-    var demo = function() {
+'attribute vec3 vertPosition;',
 
-        var score = 0;
-	var missClicks = 0;
-	var winKillAmt = 15;
-	var bacRemaining = winKillAmt;
-	var lives = 2;
-	var spawnedBac = 0;
-	var clickedPoints = [];
-	var particles = [];
-	var reduceVariable = 90;
-	// Set radius and size for game-circle
-	var r=0.8;
-	var i=0.5;
-	// Variables for Bacteria data
-	var totBac = 10;
-	var bacArr = [];
-	var rAngle = 0;
-	var tempXY = [];
-    
-    
-        //////////////////////////////////
-        //       initialize WebGL       //
-        //////////////////////////////////
-        console.log('this is working');
-    
-        var canvas = document.getElementById('gamesurface');
-        var gl = canvas.getContext('webgl');
-    
-        gl.viewport(0,0,canvas.width,canvas.height);
-    
-        
-    
-        //////////////////////////////////
-        // create/compile/link shaders  //
-        //////////////////////////////////
-        var vertexShader = gl.createShader(gl.VERTEX_SHADER);
-        var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-    
-        gl.shaderSource(vertexShader,vertexShaderText);
-        gl.shaderSource(fragmentShader,fragmentShaderText);
-    
-        gl.compileShader(vertexShader);
-        if(!gl.getShaderParameter(vertexShader,gl.COMPILE_STATUS)){
-            console.error('Error compiling vertex shader!', gl.getShaderInfoLog(vertexShader))
-            return;
-        }
-        gl.compileShader(fragmentShader);
-            if(!gl.getShaderParameter(fragmentShader,gl.COMPILE_STATUS)){
-            console.error('Error compiling vertex shader!', gl.getShaderInfoLog(fragmentShader))
-            return;
-        }
-    
-        var program = gl.createProgram();
-        gl.attachShader(program,vertexShader);
-        gl.attachShader(program,fragmentShader);
-    
-        gl.linkProgram(program);
-        if(!gl.getProgramParameter(program,gl.LINK_STATUS)){
-            console.error('Error linking program!', gl.getProgramInfo(program));
-            return;
-        }
-    
-        //////////////////////////////////
-        //      create disk buffer      //
-        //////////////////////////////////
-    
-        var diskVertexBufferObject = gl.createBuffer();
-        //set the active buffer to the triangle buffer
-        gl.bindBuffer(gl.ARRAY_BUFFER, diskVertexBufferObject);
-        //gl expecting Float32 Array not Float64
-    
-        var positionAttribLocation = gl.getAttribLocation(program,'vertPosition');
-        var fragColor = gl.getUniformLocation(program, 'fcolor');
-        gl.vertexAttribPointer(
-            positionAttribLocation, //attribute location
-            3, //number of elements per attribute
-            gl.FLOAT, 
-            gl.FALSE,
-            0*Float32Array.BYTES_PER_ELEMENT,//size of an individual vertex
-            0*Float32Array.BYTES_PER_ELEMENT//offset from the beginning of a single vertex to this attribute
-            );
-        gl.enableVertexAttribArray(positionAttribLocation);
-    
-        gl.useProgram(program);
-    
-        function drawSurface(x_coord, y_coord, radius, surfaceColor) {
-    
-            // Creating game surface disk 
-    
-            // Array to hold surface vertices 
-            var diskVertices = [];
-    
-            // Loop to add vertices that covers whole disk (up till 360 degrees)
-            for (let i = 1; i <= 360; i++) {
-                
-                diskVertices.push(x_coord);
-                diskVertices.push(y_coord);
-                diskVertices.push(0);
-    
-                diskVertices.push(radius*Math.cos(i)+x_coord);
-                diskVertices.push(radius*Math.sin(i)+y_coord);
-                diskVertices.push(0);
-    
-                diskVertices.push(radius*Math.cos(i+1)+x_coord);
-                diskVertices.push(radius*Math.sin(i+1)+y_coord);
-                diskVertices.push(0);
-                
-            }
-    
-        //////////////////////////////////
-        //            Drawing           //
-        //////////////////////////////////
-            
-        //gl.STATIC_DRAW means we send the data only once (the triangle vertex position
-        //will not change over time)
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(diskVertices),gl.STATIC_DRAW);
-    
-        // Passing color information to fragColor
-        gl.uniform4f(fragColor, surfaceColor[0], surfaceColor[1], surfaceColor[2], surfaceColor[3]);
-        
-        // Clear colors and <canvas>
-        gl.clearColor(1.0,1.0,1.0,1.0);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-    
-        // Draw
-        gl.drawArrays(gl.TRIANGLES,0,360*3);
-        
-        }
+'void main()',
+'{',
+'	gl_Position = vec4(vertPosition, 1.0);',
+'}'
+].join('\n');
 
-        // Uses radius and distance to determine if two objects are colliding
-	function colliding(x1, y1, r1, x2, y2, r2) {
-		var xDist = x2-x1;
-		var yDist = y2-y1;
-		var totDist = Math.sqrt(Math.pow(xDist, 2) + Math.pow(yDist, 2));
+var fragmentShaderText = 
+[
+'precision mediump float;',
 
-		if(distance(x1, y1, x2, y2) - (r1+r2) < 0) {
-			return true;
+'uniform vec4 fragColor;',
+
+'void main()',
+'{',
+
+' gl_FragColor = fragColor;',
+'}'
+].join('\n');
+
+var demo = function() {
+
+	//////////////////////////////////
+	//       initialize WebGL       //
+	//////////////////////////////////
+
+	console.log('this is working');
+
+	var canvas = document.getElementById('surface');
+	var gl = canvas.getContext('webgl');
+
+	if (!gl){
+		console.log('webgl not supported, falling back on experimental-webgl');
+		gl = canvas.getContext('experimental-webgl');
+	}
+	if (!gl){
+		alert('your browser does not support webgl');
+	}
+
+	gl.viewport(0,0,canvas.width,canvas.height);
+
+	//////////////////////////////////
+	// create/compile/link shaders  //
+	//////////////////////////////////
+
+	var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+	var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+
+	gl.shaderSource(vertexShader, vertexShaderText);
+	gl.shaderSource(fragmentShader, fragmentShaderText);
+
+	gl.compileShader(vertexShader);
+	if(!gl.getShaderParameter(vertexShader,gl.COMPILE_STATUS)){
+		console.error('Error compiling vertex shader!', gl.getShaderInfoLog(vertexShader))
+		return;
+	}
+	gl.compileShader(fragmentShader);
+	if(!gl.getShaderParameter(fragmentShader,gl.COMPILE_STATUS)){
+		console.error('Error compiling vertex shader!', gl.getShaderInfoLog(fragmentShader))
+		return;
+	}
+
+	var program = gl.createProgram();
+	gl.attachShader(program, vertexShader);
+	gl.attachShader(program, fragmentShader);
+
+	gl.linkProgram(program);
+	if(!gl.getProgramParameter(program,gl.LINK_STATUS)){
+		console.error('Error linking program!', gl.getProgramInfo(program));
+		return;
+	}
+
+	//Enable depth test to properly update depth buffer - bacteria shows on surface, not behind
+	gl.enable(gl.DEPTH_TEST);
+
+	//////////////////////////////////
+	//         create buffer        //
+	//////////////////////////////////
+
+	var triangleVertexBufferObject = gl.createBuffer();
+	//set the active buffer to the triangle buffer
+	gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexBufferObject);
+
+	var positionAttribLocation = gl.getAttribLocation(program, "vertPosition");
+	
+	var fragmentColor = gl.getUniformLocation(program, "fragColor");
+
+	gl.vertexAttribPointer(
+		positionAttribLocation, //attribute location
+		2, //number of elements per attribute
+		gl.FLOAT, 
+		false, 
+		0*Float32Array.BYTES_PER_ELEMENT, 
+		0*Float32Array.BYTES_PER_ELEMENT
+		);
+	gl.enableVertexAttribArray(positionAttribLocation);
+
+	gl.useProgram(program);
+
+	//////////////////////////////////
+	//            Drawing           //
+	//////////////////////////////////
+
+	function drawSurface(x_coord,y_coord,radius, surFaceColor) {
+
+		var diskVertices = [];
+
+		for (let i = 1; i <= 360; i++) {
+
+			diskVertices.push(x_coord);
+			diskVertices.push(y_coord);
+
+			diskVertices.push(radius*Math.cos(i)+x_coord);
+			diskVertices.push(radius*Math.sin(i)+y_coord);
+
+			diskVertices.push(radius*Math.cos(i+1)+x_coord);
+			diskVertices.push(radius*Math.sin(i+1)+y_coord);
 		}
 
-		return false;
+		//gl expecting Float32 Array not Float64
+		//gl.STATIC_DRAW means we send the data only once (the triangle vertex position
+		//will not change over time)
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(diskVertices), gl.STATIC_DRAW);
+		//fragmentColor variable holds surface color information
+		gl.uniform4f(fragmentColor, surFaceColor[0], surFaceColor[1], surFaceColor[2], surFaceColor[3]);
+
+		//Note: Clearing color buffer not necessary since we pass surfaceColor in uniform4f function.
+		//----- If we clear the color buffer, bacteria color doesn't properly show
+		//gl.clearColor(1.0, 1.0, 1.0, 1.0);
+		//gl.clear(gl.COLOR_BUFFER_BIT);
+
+		//Draw triangles (skip 0 vertices, and draw 360 vertices 3 times to form a complete disk)
+		//Note: Tested out drawing 360 vertices 1 and 2 times to see the difference in disk formation.
+		gl.drawArrays(gl.TRIANGLES, 0, 360*3);
+
 	}
 
-	// Pythagorean theorem
-	function distance(x1, y1, x2, y2) {
-		var xDist = x2-x1;
-		var yDist = y2-y1;
-		return Math.sqrt(Math.pow(xDist, 2) + Math.pow(yDist, 2));
-	}
+	//Total lives in a game (2 per project requirement feature 8)
+	var lives = 2;
+	//array that holds numbers of bacteria to be generated in a game
+	var toGenerate = [10, 12, 14, 16, 18, 20];
+	var randomInt = Math.floor(Math.random() * 6);
+	//total number of bacteria is a fixed number (max 10 bacteria at any point in the game)
+	var numBacteria = 10;
+	//variable that holds number of bacteria to be clicked in order to win
+	var toWin = toGenerate[randomInt];
+	var bacteriaLeft = toWin;
+	//holds total score in a game
+	var totalScore = 0;
+	//counts number of generated bacteria
+	var generated = 0;
+	//array that holds bacteria objects
+	var bacteria = [];
 
-	function normalize(x1, y1, x2, y2) {
-		let m = distance(x1, y1, x2, y2);
-		return [(x2-x1)/m, (y2-y1)/m];
-	}
-
-	function createExplosionAtBacteria(bac){
-		// Convert Bacteria(WebGL) data into canvas data
-		let bacX = (bac.x + 2/75 + 1) * 300;
-		let bacY = -1 * (bac.y-1) * 300 - 8;
-		let r = (((bac.x + bac.r) + 2/75 + 1) * 300) - bacX;
-		let num = 0;
-		let pColor = bac.color;
-
-		// Loops through the bacteria's x and y and spawn particles there
-		for(let x = 0; x < r; x++){
-			for(let y = 0; y < r; y++){
-				//Helps decrease amount of particles
-				if(num % reduceVariable == 0) {
-
-					let ppX = bacX + x;
-					let ppY = bacY + y;
-					let npX = bacX - x;
-					let npY = bacY - y;
-
-					// Create a corresponding particle for each "quandrant" of the bacteria
-					let particle = new Particle(ppX, ppY, 5, bac.color);
-					particles.push(particle);
-					particle = new Particle(npX, npY, 5, bac.color);
-					particles.push(particle);
-					particle = new Particle(ppX, npY, 5, bac.color);
-					particles.push(particle);
-					particle = new Particle(npX, ppY, 5, bac.color);
-					particles.push(particle);
-
-				}
-				num++;
+	//Bacteria class that holds methods for creating bacteria at random locations, updating, and destroying bacteria objects
+	class Bacteria {
+		// Get random values for variables determining x and y coordinates
+		getRandomGenerationCoords() {
+			//get a random angle
+			this.angle = Math.random();
+			//get random signs for x and y coordinates
+			this.randomX = plusOrMinus(0.78);
+			this.randomY = plusOrMinus(0.78);
+			this.trigonometry = sinOrCos;
+			if (this.trigonometry == "sin") {
+				this.x_coord = this.randomX*Math.sin(this.angle);
+				this.y_coord = this.randomY*Math.cos(this.angle);
+			} else {
+				this.x_coord = this.randomX*Math.cos(this.angle);
+				this.y_coord = this.randomY*Math.sin(this.angle);
 			}
 		}
+		generate() {
+			//getRandom x and y coordinates 
+			this.getRandomGenerationCoords();
+			//stores new radius for new bacteria (starts at 0.02 and grows)
+			this.radius = 0.02;
+			//holds random color multiplied by half to ensure different colors between bacteria and surface disk
+			this.color = [Math.random() * (0.5), Math.random() * (0.5), Math.random() * (0.5), 1.0];
+			//holds living condition for new bacteria, starts as true and if destroyed later on, turns to false
+			this.living = true;
+			//Increases with each new bacteria generated
+			generated++;
+		}
+		refreshState() {
+			if(this.living) {
+				// If a certain threshold (r=0.3) destroy the bacteria and decrease player's lives
+				if(this.radius > 0.25) {
+					lives--;
+					//every bacteria that reaches the threshold is destroyed, removes a life, and decrease score by 50
+					totalScore-=50;
+					this.kill(bacteria.indexOf(this));
+				} else {
+					// Increase the size of each bacteria by 0.0003 each tick
+					this.radius += 0.0005;
+				}
+				// Draw
+				drawSurface(this.x_coord, this.y_coord, this.radius, this.color);
+			}
+		}
+
+		kill(id) {
+			//Change radius and xy coordinates of bacteria to zero
+			this.radius = 0;
+			this.x_coord = 0;
+			this.y_coord = 0;
+			//bacteria is dead
+			this.living = false;
+			bacteriaLeft--;
+			//delete bacteria from array to make space for new ones
+			bacteria.splice(id,1);
+			//if bacteriaLeft is > 10 after killing a bacteria, add and generate new bacteria
+			if(bacteriaLeft >= numBacteria) {
+				bacteria.push(new Bacteria(generated));
+				bacteria[numBacteria-1].generate();
+			}
+		}
+
+	} 
+
+	//get a positive or negative sign for random x and y coordinates
+	function plusOrMinus(num){
+		if(Math.random() < 0.5){
+			num*=-1;
+		}
+		return num;
 	}
-	// Assign function to mouse click
-	canvas.onmousedown = function(e, canvas){click(e, gamesurface);};
+
+	//get random sin or cos value for random trigonometry when generating new bacteria
+	function sinOrCos(trigValue){
+		if(Math.random() < 0.5){
+			trigValue = "sin";
+		}
+		else{
+			trigValue = "cos";
+		}
+		return trigValue;
+	}
+
+	//General function for distance between 2 points
+	function distance(x1, y1, x2, y2) {
+		return Math.sqrt(Math.pow(x2-x1, 2) + Math.pow(y2-y1, 2));
+	}
+
+	//listens to mouse clicks on game surface
+	canvas.onmousedown = function(e, canvas){click(e, surface);};
 
 	// Function click
 	function click(e, canvas) {
 		let x = e.clientX;
 		let y = e.clientY;
-		let start = y;
-		let hit = false;
-		let ptsInc = 0;
+		//Grab webgl coords as x and y coordinates
 		const rect = e.target.getBoundingClientRect();
-		//Convert default canvas coords to webgl vector coords
 		x = ((x - rect.left) - canvas.width/2)/(canvas.width/2);
 		y = (canvas.height/2 - (y - rect.top))/(canvas.height/2);
-
+		let clicked = false;
+		let addedScore = 0;
 		// Loop through all bacteria and check if you clicked within the radius of any
 		// Increase score and destroy the bacteria
-		for(let i in bacArr) {
-			if(colliding(x, y, 0, bacArr[i].x, bacArr[i].y, bacArr[i].r)){
-				ptsInc = Math.round(1/bacArr[i].r);
-				createExplosionAtBacteria(bacArr[i]);
- 			 	score += ptsInc;
-				bacArr[i].destroy(i);
- 			 	hit = true;
-				clickedPoints.push({
-					pts: "+" + ptsInc,
-					x: e.clientX,
-					y: e.clientY,
-					dY: 0,
-					color: "rgba(0,200,0,"
-				});
-			 	// Break ensures you can't click multiple bacteria at once
+		for(let i in bacteria) {
+			//compare distance between mouse click and bacteria xy coordinates, be within within bacteria radius
+			if(distance(x, y, bacteria[i].x_coord, bacteria[i].y_coord) - (0 + bacteria[i].radius) < 0){
+				//score added per accurate click is equal to the bacteria's radius * 100.
+				addedScore = Math.floor(bacteria[i].radius*100);
+				//update total score everytime we click with added score
+				totalScore += addedScore;
+				//kill bacteria clicked
+				bacteria[i].kill(i);
+				clicked = true;
+			 	//break the loop to ensure only 1 bacteria is killed every click
 			 	break;
 			 }
 		}
-
-		// If you click and don't hit a bacteria, your score is decreased by 20 + the total amount of times you've clicked.
-		if(!hit && bacRemaining != 0) {
-			missClicks ++;
-			clickedPoints.push({
-				pts: -20 - missClicks,
-				x: e.clientX,
-				y: e.clientY,
-				dY: 0,
-				color: "rgba(255,0,0,"
-			});
-			score -= (20 + missClicks);
+		// Every click missed decreases total score by 10 points
+		if(!clicked && bacteriaLeft != 0) {
+			totalScore -= (10);
 		}
+	}	
+
+	// Loop to add new bacteria to array and generate, < numBacteria so we have 10 max bacteria at once
+	for(var i = 0; i<numBacteria; i++){
+		bacteria.push(new Bacteria(generated));
+		bacteria[i].generate();
 	}
 
-	// Randomly sets the passed number to a negative or positive, returns the new(or same) number
-	function randomSign(n){
-		if(Math.random() >= 0.5){
-			n = n*-1;
-		}
-		return n;
-	}
-
-	// Class for storing data about each Bacteria
-	class Bacteria {
-
-		constructor(id) {
-			this.id = id;
-			this.consuming = [];
-		}
-
-		spawn() {
-
-			// get new random data for determining x and y
-			this.getNewRandomTrigData();
-
-			// get new x and y values along the game circle
-			this.getCircPoints();
-
-			// Variable to ensure no infinite loop is created
-			var attempt = 0;
-
-			// Loop through all Bacteria to ensure no collision on spawn
-			for (var i = 0; i < bacArr.length; i++) {
-				// Error check to not break the game if the bacteria cover the whole game surface.
-				if(attempt > 500) {
-					console.log("No area for new bacteria to spawn");
-					break;
-				}
-
-				// If theres a collision with a specific object, the variables need to be randomized again
-				// Also need to set i = -1 to ensure it loops through all bacteria again
-				if (colliding(this.x, this.y, 0.06, bacArr[i].x, bacArr[i].y, bacArr[i].r)) {
-					this.getNewRandomTrigData();
-					this.getCircPoints();
-					attempt++;
-					i = -1;
-				}
-			}
-
-			// Store new data for each Bacteria
-			this.r = 0.06;
-			// times by 0.65 to ensure the bacteria isn't as light as the canvas
-			this.color = [Math.random() * (0.65), Math.random() * (0.65), Math.random() * (0.65), 0.75];
-			this.alive = true;
-			this.consuming = [];
-			spawnedBac++;
-		}
-
-		update() {
-
-			if(this.alive) {
-				// If a certain threshold (r=0.3) destroy the bacteria and decrease player's lives
-				if(this.r > 0.3) {
-					lives--;
-					this.destroy(bacArr.indexOf(this));
-				} else {
-					// Increase the size of each bacteria by 0.0003 each tick
-						this.r += 0.0003;
-					//increase alpha as bacteria grows
-					this.color[3] += 0.0003;
-
-					/* Collision Check with consuming assigning,
-						 finds which bacteria are colliding and sets the larger one to consume the other */
-					for(i in bacArr) {
-						//Skip itself
-						if(this != bacArr[i]){
-							//If either 'this' or bacArr[i] are not in each other's 'consuming' array - continue.
-							if(this.consuming.indexOf(bacArr[i]) == -1 && bacArr[i].consuming.indexOf(this) == -1) {
-								//If 'this' and bacArr[i] are colliding add it to this bacteria with the larger radius' 'consuming' array
-								if(colliding(this.x, this.y, this.r, bacArr[i].x, bacArr[i].y, bacArr[i].r)) {
-									if(this.id < bacArr[i].id){
-										this.consuming.push(bacArr[i]);
-									}
-								}
-							// Else if bacArr[i] is in this.consuming, have 'this' consume bacArr[i] by moving it inside of 'this' and shrinking it's radius
-						} else {
-								for(i in this.consuming) {
-									// Easier than typing this.consuming[i].* everytime
-									let consuming = this.consuming[i];
-									// If the consuming bacteria has fully entered the larger bacteria, destroy the consumed
-									if(distance(this.x, this.y, consuming.x, consuming.y) <= (this.r - consuming.r) || consuming.r <= 0.0){
-										consuming.destroy(bacArr.indexOf(consuming));
-									} else {
-										// Normalize vector in order to ensure consistent consumption. Specifically to the speed of consumption
-										var dVec = normalize(this.x, this.y, consuming.x, consuming.y);
-										/* While being consumed, the bacteria will
-										move in the direction of the consumer,
-										its radius will be shrunk and the consumer's
-										will grow */
-										consuming.x -= dVec[0]/(1800*consuming.r);
-										consuming.y -= dVec[1]/(1800*consuming.r);
-										consuming.r -= 0.0025;
-										this.r += 0.01*consuming.r;
-										//Increase alpha of the bacteria causing it to become darker as it consumes.
-										this.color[3] += 0.001;
-									}
-								}
-							}
-						}
-					}
-				}
-				// Draw
-				drawSurface(this.x, this.y, this.r, this.color);
-			}
-		}
-
-		destroy(index) {
-			// Set radius to zero to open up more potential respawn points
-			this.r = 0;
-			this.x = 0;
-			this.y = 0;
-			this.alive = false;
-			bacRemaining--;
-
-			// Destroy any other bacteria being consumed
-			for(i in this.consuming) {
-				this.consuming[i].destroy(bacArr.indexOf(this.consuming[i]));
-			}
-
-			// Remove destroyed bacteria from any other Bacteria.consuming arrays
-			for(i in bacArr) {
-				if(bacArr[i].consuming.indexOf(this) != -1) {
-					bacArr[i].consuming.splice(bacArr[i].consuming.indexOf(this), 1);
-				}
-			}
-
-			// Reset array for this bacteria
-			this.consuming = [];
-
-			// Remove destroyed bacteria from the bacteria array in order to spawn new ones
-			bacArr.splice(index,1);
-
-			// Spawn new bacteria
-			if(bacRemaining >= totBac) {
-				bacArr.push(new Bacteria(spawnedBac));
-				bacArr[totBac-1].spawn();
-			}
-		}
-
-		// Get random values for variables determining x and y coordinates
-		getNewRandomTrigData() {
-			this.angle = Math.random();
-			this.spawnRadX = randomSign(0.8);
-			this.spawnRadY = randomSign(0.8);
-			if(Math.random() >= 0.5) {
-				this.trig = "sin";
-			} else {
-				this.trig = "cos";
-			}
-		}
-
-		getCircPoints() {
-			var tempX, tempY;
-			// Allows for posibility to spawn along any point of the circumference
-			if (this.trig == "sin") {
-				this.x = this.spawnRadX*Math.sin(this.angle);
-				this.y = this.spawnRadY*Math.cos(this.angle);
-			} else {
-				this.x = this.spawnRadX*Math.cos(this.angle);
-				this.y = this.spawnRadY*Math.sin(this.angle);
-			}
-		}
-	} // End of Bacteria class
-
-	class Particle {
-
-		constructor(x, y, r, color) {
-			this.x = x;
-			this.y = y;
-			this.r = r + Math.random() * 5;
-			// Convert 1.0, 1.0, 1.0 rgb data to 255, 255, 255
-			this.color = "rgba(" + Math.round((1*color[0]) * 255) + "," + Math.round((1*color[1]) * 255) + "," + Math.round((1*color[2]) * 255) + "," + Math.random()*0.85 + ")";
-			this.speed = {
-				x: -1 + Math.random() * 3,
-				y: -1 + Math.random() * 3
-			}
-			this.life = 30 + Math.random() * 10;
-			// Will be used to clean out particle array at certain times.
-			//this.deltaStart = Date.now();
-		}
-
-		draw() {
-
-			// Draw if it hasn't reached it's lifespan or if its not too small
-			if(this.life > 0 && this.r > 0) {
-				pCtx.beginPath();
-				pCtx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-				pCtx.fillStyle = this.color;
-				pCtx.fill();
-
-				// Update data
-				this.life--;
-				this.r -= 0.25;
-				this.x += this.speed.x;
-				this.y += this.speed.y;
-			}
-		}
-	} // End of Particle Class
-
-	// Create and push new Bacteria objects into bacArr, then spawn each Bacteria
-	for(var i = 0; i<totBac; i++){
-		bacArr.push(new Bacteria(spawnedBac));
-		bacArr[i].spawn();
-	}
-
-	function winCondition(){
-		 if(lives > 0 && bacRemaining <= 0) {
-/*
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
-			clickedPoints = [];
-			particles = [];
-			ctx.fillStyle = "rgba(0, 255, 0, 1.0)";
-			ctx.font = "80px Verdana";
-			ctx.fillText("You win!", 300, 300);
-*/
+	//if player still has lives and there is no more bacteria left, player wins
+	function win(){
+		 if(lives > 0 && bacteriaLeft <= 0) {
+			document.getElementById("status").innerHTML="You Win!";
 		 	return true;
 		 }
 		return false;
 	}
 
-	function loseCondition(){
-		if(lives<=0) {
-/*
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
-			ctx.font = "80px Verdana";
-			ctx.fillStyle = "red";
-			ctx.fillText("Game over", 300, 300);
-			ctx.font = "40px Verdana";
-			ctx.fillText("You lose...", 310, 355);
-*/
+	//if player has no more lives left, player loses
+	function loss(){
+		if(lives <= 0) {
+			document.getElementById("status").innerHTML="Game Over!";
 			return true;
 		}
 		return false;
 	}
 
-	// Game Loop
-	function gameLoop() {
-		// Updates the score span element in the html
-		document.getElementById('scoreDisplay').innerHTML=score;
-		document.getElementById('bacRemaining').innerHTML=bacRemaining;
-		document.getElementById('lives').innerHTML=lives;
-
-		if(!winCondition() && lives > 0) {
-			for (let i in bacArr) {
-					bacArr[i].update();
-					if (loseCondition()) {
-						bacRemaining = 0;
+	// Main Loop that runs the game and updates html values on screen
+	function main() {
+		document.getElementById("lives").innerHTML= "Remaining Lives: " + lives;
+		document.getElementById("score").innerHTML= "Score: " + totalScore;
+		document.getElementById("bacteria").innerHTML= "Remaining Bacteria: " + bacteriaLeft;
+		//If game isn't won and player still has lives, game continues 
+		if(!win() && lives > 0) {
+			for (let i in bacteria) {
+				bacteria[i].refreshState();
+				//if player has no more lives, bacteria left is set to 0 and loop breaks 
+					if (loss()) {
+						bacteriaLeft = 0;
 						break;
 					}
 				}
-/*
-				// Used for displaying points awarded on clicks
-				for(i in clickedPoints) {
-					// Variable for change in y position of each point
-					clickedPoints[i].dY--;
-					// If the point's y has changed by 50, remove the point from the array
-					if(clickedPoints[i].dY <= -50){
-						clickedPoints.splice(i,1);
-					} else {
-						// Clear canvas only around specific text
-						ctx.clearRect(clickedPoints[i].x - 25, clickedPoints[i].y + clickedPoints[i].dY - 20, clickedPoints[i].x + 20, clickedPoints[i].y + 20);
-						// Alpha of the points approaches zero as it reaches its max change in y to simulate a fade out
-						ctx.fillStyle = clickedPoints[i].color + (1.0 - (clickedPoints[i].dY * -0.02) + ")");
-						// Print the points awarded and move them upwards
-						ctx.fillText(clickedPoints[i].pts, clickedPoints[i].x, clickedPoints[i].y + clickedPoints[i].dY);
-					}
-				}
-
-				// Loop through all particles to draw
-				pCtx.clearRect(0, 0, canvas.width, canvas.height);
-				for(i in particles) {
-					particles[i].draw();
-				}
-*/
-				// Just to ensure the game over text is printed. Need to fix this mess up.
-				loseCondition();
+				loss();
 			}
-
-		// Draw the game surface circle
-		drawSurface(0,0,0.8,[0.05, 0.1, 0.05, 0.5]);
-		requestAnimationFrame(gameLoop);
+		drawSurface(0,0,0.8,[0.6, 0.8, 1.0, 1.0]);
+		requestAnimationFrame(main);
 	}
-	requestAnimationFrame(gameLoop);
-        
+	requestAnimationFrame(main);
 }

@@ -1,33 +1,39 @@
-// Vertex and fragement shader source
-var vertCode = [
-	'attribute vec3 coordinates;',
-	'',
-	'void main() {',
-	'	gl_Position = vec4(coordinates, 1.0);',
-	'}'
-].join('\n');
+var vertexShaderText = [
 
-var fragCode = [
-  'precision mediump float;',
-  'uniform vec4 fColor;',
-  '',
-  'void main()',
-  '{',
-  ' gl_FragColor = fColor;',
-  '}'
-].join('\n');
+    'attribute vec3 vertPosition;',
+    
+    '',
+    
+    'void main()',
+    '{',
+    '	gl_Position = vec4(vertPosition, 1.0);',
+    '}'
+    ].join('\n');
+    
+    var fragmentShaderText =
+    [
+    'precision mediump float;',
+    'uniform vec4 fcolor;',
+    
+    '',
+    'void main()',
+    '{',
+        
+    '	gl_FragColor = fcolor;',
+    '}',
+    ].join('\n')
+    
+    
+    var demo = function() {
 
-var main = function() {
-
-	// Game's main variables
-	var score = 0;
+        var score = 0;
 	var missClicks = 0;
 	var winKillAmt = 15;
 	var bacRemaining = winKillAmt;
 	var lives = 2;
 	var spawnedBac = 0;
-	//var clickedPoints = [];
-	//var particles = [];
+	var clickedPoints = [];
+	var particles = [];
 	var reduceVariable = 90;
 	// Set radius and size for game-circle
 	var r=0.8;
@@ -37,118 +43,129 @@ var main = function() {
 	var bacArr = [];
 	var rAngle = 0;
 	var tempXY = [];
+    
+    
+        //////////////////////////////////
+        //       initialize WebGL       //
+        //////////////////////////////////
+        console.log('this is working');
+    
+        var canvas = document.getElementById('gamesurface');
+        var gl = canvas.getContext('webgl');
+    
+        gl.viewport(0,0,canvas.width,canvas.height);
+    
+        
+    
+        //////////////////////////////////
+        // create/compile/link shaders  //
+        //////////////////////////////////
+        var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    
+        gl.shaderSource(vertexShader,vertexShaderText);
+        gl.shaderSource(fragmentShader,fragmentShaderText);
+    
+        gl.compileShader(vertexShader);
+        if(!gl.getShaderParameter(vertexShader,gl.COMPILE_STATUS)){
+            console.error('Error compiling vertex shader!', gl.getShaderInfoLog(vertexShader))
+            return;
+        }
+        gl.compileShader(fragmentShader);
+            if(!gl.getShaderParameter(fragmentShader,gl.COMPILE_STATUS)){
+            console.error('Error compiling vertex shader!', gl.getShaderInfoLog(fragmentShader))
+            return;
+        }
+    
+        var program = gl.createProgram();
+        gl.attachShader(program,vertexShader);
+        gl.attachShader(program,fragmentShader);
+    
+        gl.linkProgram(program);
+        if(!gl.getProgramParameter(program,gl.LINK_STATUS)){
+            console.error('Error linking program!', gl.getProgramInfo(program));
+            return;
+        }
+    
+        //////////////////////////////////
+        //      create disk buffer      //
+        //////////////////////////////////
+    
+        var diskVertexBufferObject = gl.createBuffer();
+        //set the active buffer to the triangle buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, diskVertexBufferObject);
+        //gl expecting Float32 Array not Float64
+    
+        var positionAttribLocation = gl.getAttribLocation(program,'vertPosition');
+        var fragColor = gl.getUniformLocation(program, 'fcolor');
+        gl.vertexAttribPointer(
+            positionAttribLocation, //attribute location
+            3, //number of elements per attribute
+            gl.FLOAT, 
+            gl.FALSE,
+            0*Float32Array.BYTES_PER_ELEMENT,//size of an individual vertex
+            0*Float32Array.BYTES_PER_ELEMENT//offset from the beginning of a single vertex to this attribute
+            );
+        gl.enableVertexAttribArray(positionAttribLocation);
+    
+        gl.useProgram(program);
+    
+        function drawSurface(x_coord, y_coord, radius, surfaceColor) {
+    
+            // Creating game surface disk 
+    
+            // Array to hold surface vertices 
+            var diskVertices = [];
+    
+            // Loop to add vertices that covers whole disk (up till 360 degrees)
+            for (let i = 1; i <= 360; i++) {
+                
+                diskVertices.push(x_coord);
+                diskVertices.push(y_coord);
+                diskVertices.push(0);
+    
+                diskVertices.push(radius*Math.cos(i)+x_coord);
+                diskVertices.push(radius*Math.sin(i)+y_coord);
+                diskVertices.push(0);
+    
+                diskVertices.push(radius*Math.cos(i+1)+x_coord);
+                diskVertices.push(radius*Math.sin(i+1)+y_coord);
+                diskVertices.push(0);
+                
+            }
+    
+        //////////////////////////////////
+        //            Drawing           //
+        //////////////////////////////////
+            
+        //gl.STATIC_DRAW means we send the data only once (the triangle vertex position
+        //will not change over time)
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(diskVertices),gl.STATIC_DRAW);
+    
+        // Passing color information to fragColor
+        gl.uniform4f(fragColor, surfaceColor[0], surfaceColor[1], surfaceColor[2], surfaceColor[3]);
+        
+        // Clear colors and <canvas>
+        gl.clearColor(1.0,1.0,1.0,1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+    
+        // Draw
+        gl.drawArrays(gl.TRIANGLES,0,360*3);
+        
+        }
 
-	// Creating a WebGL Context Canvas
-	var canvas = document.getElementById('gameSurface');
-	var gl = canvas.getContext('webgl');
-	// Creating a 2D Canvas for displaying text
-	var textCanvas = document.getElementById('text');
-	var ctx = textCanvas.getContext('2d')
-	// Creating a 2D Canvas for particles
-	var particlesCanvas = document.getElementById('particles');
-	var pCtx = particlesCanvas.getContext('2d')
+        // Uses radius and distance to determine if two objects are colliding
+	function colliding(x1, y1, r1, x2, y2, r2) {
+		var xDist = x2-x1;
+		var yDist = y2-y1;
+		var totDist = Math.sqrt(Math.pow(xDist, 2) + Math.pow(yDist, 2));
 
-	// Set font for text Canvas
-	ctx.font = "20px Verdana";
-	ctx.textAlign = "center";
-
-	
-
-	// Create an empty buffer object
-	var vertex_buffer = gl.createBuffer();
-
-	// Set the view port
-	gl.viewport(0,0,canvas.width,canvas.height);
-
-	// Bind appropriate array buffer to it
-	gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
-
-	// Enable the depth test
-	gl.enable(gl.DEPTH_TEST);
-
-	// Create vertex and fragment shader objects
-	var vertShader = gl.createShader(gl.VERTEX_SHADER);
-	var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
-
-	// Shaders
-	// Attach vertex shader source code and compile
-	gl.shaderSource(vertShader, vertCode);
-	gl.compileShader(vertShader);
-
-	// Attach fragment shader source code and compile
-	gl.shaderSource(fragShader, fragCode);
-	gl.compileShader(fragShader);
-
-	// Create shader program
-	var shaderProgram = gl.createProgram();
-
-	// Attach the vertex and fragment shader
-	gl.attachShader(shaderProgram, vertShader);
-	gl.attachShader(shaderProgram, fragShader);
-
-	// Link and use
-	gl.linkProgram(shaderProgram);
-	gl.useProgram(shaderProgram);
-
-	// Get the attribute and uniform location
-	var coord = gl.getAttribLocation(shaderProgram, "coordinates");
-	var fColor = gl.getUniformLocation(shaderProgram, "fColor");
-
-	// Point an attribute to the currently bound VBO and enable the attribute
-	gl.vertexAttribPointer(coord, 3, gl.FLOAT, false, 0, 0);
-	gl.enableVertexAttribArray(coord);
-
-	function draw_circle(x,y,r,color) {
-
-		// For storing the produces vertices
-		var vertices = [];
-
-		// Prepare vertices
-		for (let i = 1; i <= 360; i++) {
-			var y1 = r*Math.sin(i)+y;
-			var x1 = r*Math.cos(i)+x;
-
-			var y2 = r*Math.sin(i+1)+y;
-			var x2 = r*Math.cos(i+1)+x;
-
-			vertices.push(x);
-			vertices.push(y);
-			vertices.push(0);
-
-			vertices.push(x1);
-			vertices.push(y1);
-			vertices.push(0);
-
-			vertices.push(x2);
-			vertices.push(y2);
-			vertices.push(0);
+		if(distance(x1, y1, x2, y2) - (r1+r2) < 0) {
+			return true;
 		}
 
-		// Pass the vertex data to the buffer
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-
-		// Pass color data to uniform fColor
-		gl.uniform4f(fColor, color[0], color[1], color[2], color[3]);
-
-		// Drawing triangles
-		gl.clearColor(0, 1, 0, 0.9);
-		// Draw the triangle 360*3, 3 layers of vertices (disk)
-		gl.drawArrays(gl.TRIANGLES, 0, 360*3);
-
+		return false;
 	}
-
-	// Uses radius and distance to determine if two objects are colliding
-	// function colliding(x1, y1, r1, x2, y2, r2) {
-	// 	var xDist = x2-x1;
-	// 	var yDist = y2-y1;
-	// 	var totDist = Math.sqrt(Math.pow(xDist, 2) + Math.pow(yDist, 2));
-
-	// 	if(distance(x1, y1, x2, y2) - (r1+r2) < 0) {
-	// 		return true;
-	// 	}
-
-	// 	return false;
-	// }
 
 	// Pythagorean theorem
 	function distance(x1, y1, x2, y2) {
@@ -161,7 +178,7 @@ var main = function() {
 		let m = distance(x1, y1, x2, y2);
 		return [(x2-x1)/m, (y2-y1)/m];
 	}
-/*
+
 	function createExplosionAtBacteria(bac){
 		// Convert Bacteria(WebGL) data into canvas data
 		let bacX = (bac.x + 2/75 + 1) * 300;
@@ -196,9 +213,8 @@ var main = function() {
 			}
 		}
 	}
-	*/
 	// Assign function to mouse click
-	canvas.onmousedown = function(e, canvas){click(e, gameSurface);};
+	canvas.onmousedown = function(e, canvas){click(e, gamesurface);};
 
 	// Function click
 	function click(e, canvas) {
@@ -215,13 +231,12 @@ var main = function() {
 		// Loop through all bacteria and check if you clicked within the radius of any
 		// Increase score and destroy the bacteria
 		for(let i in bacArr) {
-			if(distance(x, y, bacArr[i].x, bacArr[i].y) - (0+ bacArr[i].r) < 0){
+			if(colliding(x, y, 0, bacArr[i].x, bacArr[i].y, bacArr[i].r)){
 				ptsInc = Math.round(1/bacArr[i].r);
-				//createExplosionAtBacteria(bacArr[i]);
+				createExplosionAtBacteria(bacArr[i]);
  			 	score += ptsInc;
 				bacArr[i].destroy(i);
  			 	hit = true;
-				  /*
 				clickedPoints.push({
 					pts: "+" + ptsInc,
 					x: e.clientX,
@@ -229,7 +244,6 @@ var main = function() {
 					dY: 0,
 					color: "rgba(0,200,0,"
 				});
-				*/
 			 	// Break ensures you can't click multiple bacteria at once
 			 	break;
 			 }
@@ -238,7 +252,6 @@ var main = function() {
 		// If you click and don't hit a bacteria, your score is decreased by 20 + the total amount of times you've clicked.
 		if(!hit && bacRemaining != 0) {
 			missClicks ++;
-			/*
 			clickedPoints.push({
 				pts: -20 - missClicks,
 				x: e.clientX,
@@ -246,7 +259,6 @@ var main = function() {
 				dY: 0,
 				color: "rgba(255,0,0,"
 			});
-			*/
 			score -= (20 + missClicks);
 		}
 	}
@@ -264,7 +276,7 @@ var main = function() {
 
 		constructor(id) {
 			this.id = id;
-			//this.consuming = [];
+			this.consuming = [];
 		}
 
 		spawn() {
@@ -288,12 +300,12 @@ var main = function() {
 
 				// If theres a collision with a specific object, the variables need to be randomized again
 				// Also need to set i = -1 to ensure it loops through all bacteria again
-				// if (colliding(this.x, this.y, 0.06, bacArr[i].x, bacArr[i].y, bacArr[i].r)) {
-				// 	this.getNewRandomTrigData();
-				// 	this.getCircPoints();
-				// 	attempt++;
-				// 	i = -1;
-				// }
+				if (colliding(this.x, this.y, 0.06, bacArr[i].x, bacArr[i].y, bacArr[i].r)) {
+					this.getNewRandomTrigData();
+					this.getCircPoints();
+					attempt++;
+					i = -1;
+				}
 			}
 
 			// Store new data for each Bacteria
@@ -301,7 +313,7 @@ var main = function() {
 			// times by 0.65 to ensure the bacteria isn't as light as the canvas
 			this.color = [Math.random() * (0.65), Math.random() * (0.65), Math.random() * (0.65), 0.75];
 			this.alive = true;
-			//this.consuming = [];
+			this.consuming = [];
 			spawnedBac++;
 		}
 
@@ -319,7 +331,7 @@ var main = function() {
 					this.color[3] += 0.0003;
 
 					/* Collision Check with consuming assigning,
-						 finds which bacteria are colliding and sets the larger one to consume the other 
+						 finds which bacteria are colliding and sets the larger one to consume the other */
 					for(i in bacArr) {
 						//Skip itself
 						if(this != bacArr[i]){
@@ -345,7 +357,7 @@ var main = function() {
 										/* While being consumed, the bacteria will
 										move in the direction of the consumer,
 										its radius will be shrunk and the consumer's
-										will grow 
+										will grow */
 										consuming.x -= dVec[0]/(1800*consuming.r);
 										consuming.y -= dVec[1]/(1800*consuming.r);
 										consuming.r -= 0.0025;
@@ -357,10 +369,9 @@ var main = function() {
 							}
 						}
 					}
-					*/
 				}
 				// Draw
-				draw_circle(this.x, this.y, this.r, this.color);
+				drawSurface(this.x, this.y, this.r, this.color);
 			}
 		}
 
@@ -372,20 +383,20 @@ var main = function() {
 			this.alive = false;
 			bacRemaining--;
 
-			// // Destroy any other bacteria being consumed
-			// for(i in this.consuming) {
-			// 	this.consuming[i].destroy(bacArr.indexOf(this.consuming[i]));
-			// }
+			// Destroy any other bacteria being consumed
+			for(i in this.consuming) {
+				this.consuming[i].destroy(bacArr.indexOf(this.consuming[i]));
+			}
 
-			// // Remove destroyed bacteria from any other Bacteria.consuming arrays
-			// for(i in bacArr) {
-			// 	if(bacArr[i].consuming.indexOf(this) != -1) {
-			// 		bacArr[i].consuming.splice(bacArr[i].consuming.indexOf(this), 1);
-			// 	}
-			// }
+			// Remove destroyed bacteria from any other Bacteria.consuming arrays
+			for(i in bacArr) {
+				if(bacArr[i].consuming.indexOf(this) != -1) {
+					bacArr[i].consuming.splice(bacArr[i].consuming.indexOf(this), 1);
+				}
+			}
 
-			// // Reset array for this bacteria
-			// this.consuming = [];
+			// Reset array for this bacteria
+			this.consuming = [];
 
 			// Remove destroyed bacteria from the bacteria array in order to spawn new ones
 			bacArr.splice(index,1);
@@ -421,7 +432,7 @@ var main = function() {
 			}
 		}
 	} // End of Bacteria class
-/*
+
 	class Particle {
 
 		constructor(x, y, r, color) {
@@ -456,7 +467,6 @@ var main = function() {
 			}
 		}
 	} // End of Particle Class
-	*/
 
 	// Create and push new Bacteria objects into bacArr, then spawn each Bacteria
 	for(var i = 0; i<totBac; i++){
@@ -466,12 +476,14 @@ var main = function() {
 
 	function winCondition(){
 		 if(lives > 0 && bacRemaining <= 0) {
+/*
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
-			//clickedPoints = [];
-			//particles = [];
+			clickedPoints = [];
+			particles = [];
 			ctx.fillStyle = "rgba(0, 255, 0, 1.0)";
 			ctx.font = "80px Verdana";
 			ctx.fillText("You win!", 300, 300);
+*/
 		 	return true;
 		 }
 		return false;
@@ -479,12 +491,14 @@ var main = function() {
 
 	function loseCondition(){
 		if(lives<=0) {
+/*
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 			ctx.font = "80px Verdana";
 			ctx.fillStyle = "red";
 			ctx.fillText("Game over", 300, 300);
 			ctx.font = "40px Verdana";
 			ctx.fillText("You lose...", 310, 355);
+*/
 			return true;
 		}
 		return false;
@@ -505,38 +519,38 @@ var main = function() {
 						break;
 					}
 				}
-
+/*
 				// Used for displaying points awarded on clicks
-				// for(i in clickedPoints) {
-				// 	// Variable for change in y position of each point
-				// 	clickedPoints[i].dY--;
-				// 	// If the point's y has changed by 50, remove the point from the array
-				// 	if(clickedPoints[i].dY <= -50){
-				// 		clickedPoints.splice(i,1);
-				// 	} else {
-				// 		// Clear canvas only around specific text
-				// 		ctx.clearRect(clickedPoints[i].x - 25, clickedPoints[i].y + clickedPoints[i].dY - 20, clickedPoints[i].x + 20, clickedPoints[i].y + 20);
-				// 		// Alpha of the points approaches zero as it reaches its max change in y to simulate a fade out
-				// 		ctx.fillStyle = clickedPoints[i].color + (1.0 - (clickedPoints[i].dY * -0.02) + ")");
-				// 		// Print the points awarded and move them upwards
-				// 		ctx.fillText(clickedPoints[i].pts, clickedPoints[i].x, clickedPoints[i].y + clickedPoints[i].dY);
-				// 	}
-				// }
+				for(i in clickedPoints) {
+					// Variable for change in y position of each point
+					clickedPoints[i].dY--;
+					// If the point's y has changed by 50, remove the point from the array
+					if(clickedPoints[i].dY <= -50){
+						clickedPoints.splice(i,1);
+					} else {
+						// Clear canvas only around specific text
+						ctx.clearRect(clickedPoints[i].x - 25, clickedPoints[i].y + clickedPoints[i].dY - 20, clickedPoints[i].x + 20, clickedPoints[i].y + 20);
+						// Alpha of the points approaches zero as it reaches its max change in y to simulate a fade out
+						ctx.fillStyle = clickedPoints[i].color + (1.0 - (clickedPoints[i].dY * -0.02) + ")");
+						// Print the points awarded and move them upwards
+						ctx.fillText(clickedPoints[i].pts, clickedPoints[i].x, clickedPoints[i].y + clickedPoints[i].dY);
+					}
+				}
 
 				// Loop through all particles to draw
-				// pCtx.clearRect(0, 0, canvas.width, canvas.height);
-				// for(i in particles) {
-				// 	particles[i].draw();
-				// }
+				pCtx.clearRect(0, 0, canvas.width, canvas.height);
+				for(i in particles) {
+					particles[i].draw();
+				}
+*/
 				// Just to ensure the game over text is printed. Need to fix this mess up.
 				loseCondition();
 			}
 
 		// Draw the game surface circle
-		draw_circle(0,0,0.8,[0.6, 0.8, 1.0, 1.0]);
+		drawSurface(0,0,0.8,[0.05, 0.1, 0.05, 0.5]);
 		requestAnimationFrame(gameLoop);
 	}
 	requestAnimationFrame(gameLoop);
+        
 }
-
-	
