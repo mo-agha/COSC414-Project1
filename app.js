@@ -269,8 +269,8 @@ var demo = function() {
 		for(let i in bacteria) {
 			//compare distance between mouse click and bacteria xy coordinates, be within within bacteria radius
 			if(distance(x, y, bacteria[i].x_coord, bacteria[i].y_coord) - (0 + bacteria[i].radius) < 0){
-				//score added per accurate click is equal to the bacteria's radius * 100.
-				addedScore = Math.floor(bacteria[i].radius*100);
+				//score added per accurate click is equal to 2/bacteria's radius.
+				addedScore = Math.floor(2/bacteria[i].radius);
 				//update total score everytime we click with added score
 				totalScore += addedScore;
 				//kill bacteria clicked
