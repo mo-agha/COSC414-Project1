@@ -155,6 +155,11 @@ var demo = function() {
 	var generated = 0;
 	//array that holds bacteria objects
 	var bacteria = [];
+	// image for html
+	var bacimg = document.createElement("bacimg");
+	bacimg.src = "bacteria.png";
+	var src = document.getElementById("bacteria");
+	src.append(bacimg);
 
 	//Bacteria class that holds methods for creating bacteria at random locations, updating, and destroying bacteria objects
 	class Bacteria {
@@ -188,14 +193,14 @@ var demo = function() {
 		}
 		refreshState() {
 			if(this.living) {
-				// If a certain threshold (r=0.3) destroy the bacteria and decrease player's lives
+				// set threshold to 0.25, if bacteria reaches set threshold, player loses life and bacteria is killed.
 				if(this.radius > 0.25) {
 					lives--;
 					//every bacteria that reaches the threshold is destroyed, removes a life, and decrease score by 50
 					totalScore-=50;
 					this.kill(bacteria.indexOf(this));
 				} else {
-					// Increase the size of each bacteria by 0.0003 each tick
+					// radius increases by 0.0005 as state refreshes.
 					this.radius += 0.0005;
 				}
 				// Draw
@@ -307,6 +312,7 @@ var demo = function() {
 
 	// Main Loop that runs the game and updates html values on screen
 	function main() {
+		
 		document.getElementById("lives").innerHTML= "Remaining Lives: " + lives;
 		document.getElementById("score").innerHTML= "Score: " + totalScore;
 		document.getElementById("bacteria").innerHTML= "Remaining Bacteria: " + bacteriaLeft;
